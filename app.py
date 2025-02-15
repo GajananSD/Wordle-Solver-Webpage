@@ -12,15 +12,18 @@ green_dict = {}  # {letter: [positions]}
 orange_dict = {}  # {letter: [positions]}
 gray_list = []  # [letters]
 
+
 @app.route('/')
 def index():
-    global current_word_index, green_dict, orange_dict, gray_list,sorted_list
-    green_dict = {} 
-    orange_dict = {} 
-    gray_list = []  
+    global current_word_index, green_dict, orange_dict, gray_list, sorted_list
+    green_dict = {}
+    orange_dict = {}
+    gray_list = []
     sorted_list = []
     current_word_index = 0  # Reset the index when the page is loaded
-    return render_template('index.html', word=Initial_guess[current_word_index])
+    return render_template('index.html',
+                           word=Initial_guess[current_word_index])
+
 
 @app.route('/submit_guess', methods=['POST'])
 def submit_guess():
@@ -44,7 +47,7 @@ def submit_guess():
         elif color == "grey":
             if letter not in gray_list:
                 gray_list.append(letter)
-   
+
     # Check if all blocks are green
     all_green = all(color == "green" for color in guessed_colors)
     # Move to the next word or end the game
@@ -66,44 +69,61 @@ def submit_guess():
                 "show_user_input": False
             }
         elif current_word_index <= 5:
-            next_word, sorted_list = word_sorting(gray_list,green_dict,orange_dict,sorted_list)
+            next_word, sorted_list = word_sorting(gray_list, green_dict,
+                                                  orange_dict, sorted_list)
             if next_word == 'Not available in db':
                 response = {
-                "result": "Word not present in Database. Please enter that 5-letter word.",
-                "next_word": None,
-                "all_green": False,
-                "show_user_input": True
+                    "result":
+                    "Word not present in Database. Please enter that 5-letter word.",
+                    "next_word": None,
+                    "all_green": False,
+                    "show_user_input": True
                 }
             else:
                 response = {
-                "result": "Check above guess",
-                "next_word": next_word,
-                "all_green": False,
-                "show_user_input": False
+                    "result": "Check above guess",
+                    "next_word": next_word,
+                    "all_green": False,
+                    "show_user_input": False
                 }
         else:
             response = {
-                "result": "Word not present in Database\nPlease enter that 5-letter word.",
+                "result":
+                "Word not present in Database\nPlease enter that 5-letter word.",
                 "next_word": None,
                 "all_green": False,
                 "show_user_input": True
             }
     return jsonify(response)
 
+
 @app.route('/submit_user_word', methods=['POST'])
 def submit_user_word():
     data = request.get_json()
     user_word = data.get('word')
+    # Check if the word is exactly 5 letters long
     if len(user_word) != 5:
-        return jsonify({"success": False, "message": "Word must be 5 letters long."})
-
-    # Append the word to word.txt
+        return jsonify({
+            "success": False,
+            "message": "Word must be 5 letters long."
+        })
+    # Check if the word is already in the file
     try:
+        with open("words.txt", "r") as file:
+            existing_words = file.read().splitlines()
+        if user_word.lower() in existing_words:
+            return jsonify({
+                "success": False,
+                "message": "Word present in database."
+            })
+        # If the word is not present, append it to the file
         with open("words.txt", "a") as file:
             file.write(user_word.lower() + "\n")
+
         return jsonify({"success": True})
     except Exception as e:
         return jsonify({"success": False, "message": str(e)})
 
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=8080, debug=True)
